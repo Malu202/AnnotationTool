@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Annotation Tool</title>
+    <style>
+        body {
+            margin: 0px;
+            padding: 0px;
+        }
+
+        #myContainer {
+            position: relative;
+            /* margin: 0 auto; */
+            margin: 0px;
+        }
+
+        #myVideo,
+        #myCanvas {
+            display: block;
+            position: absolute;
+        }
+
+        #myCanvas {
+            /* pointer-events: none; */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="myContainer">
+
+        <!-- ondrop="dropHandler(event);" ondragover="dragOverHandler(event);" -->
+        <video id="myVideo" preload muted controls>
+        </video>
+        <!-- <canvas id="imageCanvas"></canvas> -->
+        <canvas id="myCanvas"></canvas>
+</body>
+
+<script>
+    var player = document.getElementById("myVideo");
+    var container = document.getElementById("myContainer");
+    var canvas = document.getElementById("myCanvas");
+    var ctx = canvas.getContext("2d");
+
+    window.addEventListener("drop", dropHandler);
+    window.addEventListener("dragover", dragOverHandler);
+
+    player.height = window.innerHeight / 2; /* to get an initial width to work with*/
+
+    function resize() {
+        videoRatio = player.videoHeight / player.videoWidth;
+        windowRatio = window.innerHeight / window.innerWidth; /* browser size */
+
+        var heigh, width;
+        if (windowRatio < videoRatio) {
+            if (window.innerHeight > 50) { /* smallest video height */
+                height = window.innerHeight;
+            } else {
+                height = 50;
+            }
+            width = height / videoRatio;
+        } else {
+            width = window.innerWidth;
+
+            height = width * videoRatio;
+        }
+
+        width = Math.floor(width);
+        height = Math.floor(height);
+
+        player.height = height;
+        player.width = width;
+
+        container.style.width = width + "px";
+        container.style.height = height + "px";
+        canvas.width = width;
+        canvas.height = height;
+        drawAnnotations();
+    };
+
+    var files;
+    function dropHandler(event) {
+        var e = e || event;
+        e.preventDefault();
+
+        files = [];
+        if (e.dataTransfer.items) {
+            for (var i = 0; i < e.dataTransfer.items.length; i++) {
+                if (e.dataTransfer.items[i].kind === 'file') {
+                    var file = e.dataTransfer.items[i].getAsFile();
+                    console.log('... file[' + i + '].name = ' + file.name);
+                    files.push(file)
+                }
+            }
+        } else {
+            for (var i = 0; i < e.dataTransfer.files.length; i++) {
+                console.log('... file[' + i + '].name = ' + e.dataTransfer.files[i].name);
+            }
+            files = e.dataTransfer.files;
+        }
+        var fileURL = URL.createObjectURL(files[0]);
+        player.src = fileURL;
+
+        // resize();
+
+    }
+    player.addEventListener("canplay", function () {
+        resize();
+    })
+    window.addEventListener('resize', function () {
+        Annotations = [];
+        resize();
+    });
+
+    function dragOverHandler(event) {
+        var e = e || event;
+        e.preventDefault();
+        // console.log("a")
+    }
+
+    const KEY_SPACE = 32;
+    const KEY_LEFT = 37;
+    const KEY_RIGHT = 39;
+    const KEY_UP = 38;
+    const KEY_DOWN = 40;
+    const KEY_ENTER = 13;
+    const KEY_W = 87;
+    const KEY_A = 65;
+    const KEY_S = 83;
+    const KEY_D = 68;
+    const KEY_R = 82
+    const KEY_ESCAPE = 27;
+
+    var skipSize = 3;
+    var skipSizeSmall = 0.3;
+
+
+
+    addEvent(document, "keydown", function (e) {
+        e = e || window.event;
+        switch (e.keyCode) {
+            // case KEY_ENTER:
+            //     takeImage();
+            //     break;
+            case KEY_SPACE:
+                if (player.controls) {
+                    if (player.paused) { player.play(); }
+                    else { player.pause(); }
+                }
+                break;
+            case KEY_LEFT:
+            case KEY_A:
+                if (player.controls) {
+                    if (e.shiftKey) player.currentTime -= skipSizeSmall;
+                    else player.currentTime -= skipSize;
+                }
+                break;
+            case KEY_RIGHT:
+            case KEY_D:
+                if (player.controls) {
+                    if (e.shiftKey) player.currentTime += skipSizeSmall;
+                    else player.currentTime += skipSize;
+                }
+                break;
+            case KEY_ESCAPE:
+                if (!currentAnnotation && !movingType && !drawing) {
+                    bildAbbrechen();
+                    break;
+                }
+                currentAnnotation = null;
+                movingType = "";
+                drawing = false;
+                break;
+            case KEY_ENTER:
+                saveAnnotations();
+                break;
+            case KEY_S:
+                e.preventDefault();
+                if (e.ctrlKey) saveAnnotations();
+                break;
+            case KEY_R:
+                e.preventDefault();
+                Annotations = Annotations.concat(previousAnnotations);
+                drawAnnotations();
+                player.controls = false;
+            default:
+                break;
+        }
+
+    });
+
+    function bildAbbrechen() {
+        var abbruch = confirm("This image will be canceled.");
+        var text;
+        if (abbruch) {
+            Annotations = [];
+            drawAnnotations();
+            player.controls = true;
+        } else {
+
+        }
+    }
+
+    function saveAnnotations() {
+        var FileName = (((new Date()) * 1) + "");
+        FileName = FileName.substring(0, FileName.length - 3);
+        saveCurrentImage(FileName);
+        var annotationsCsv = "";
+        for (var i = 0; i < Annotations.length; i++) {
+            annotationsCsv += FileName + ".jpg" + Annotations[i].getCsvString() + '\n';
+        }
+        saveAnnotationFile(FileName, annotationsCsv)
+        previousAnnotations = Annotations;
+        Annotations = [];
+        drawAnnotations();
+        player.controls = true;
+    }
+
+    function addEvent(element, eventName, callback) {
+        if (element.addEventListener) {
+            element.addEventListener(eventName, callback, false);
+        } else if (element.attachEvent) {
+            element.attachEvent("on" + eventName, callback);
+        } else {
+            element["on" + eventName] = callback;
+        }
+    }
+
+    // function takeImage() {
+    //     ctx.drawImage(player, 0, 0, player.clientWidth, player.clientHeight);
+
+    //     var dataURL = canvas.toDataURL('image/jpg');
+    //     //saveImage("test.jpg", dataURL)
+    // }
+
+    // function saveImage(name, dataUrl) {
+    //     var a = document.createElement("a");
+    //     a.download = name;
+    //     a.href = dataUrl;
+
+    //     a.click();
+    //     ctx.clearRect(0, 0, 1920, 1920)
+    // }
+
+    var a;
+    function saveCurrentImage(name) {
+        var tempCanvas = document.createElement("canvas");
+        tempCanvas.width = player.videoWidth;
+        tempCanvas.height = player.videoHeight;
+        var tempCtx = tempCanvas.getContext("2d");
+
+        tempCtx.drawImage(player, 0, 0, player.videoWidth, player.videoHeight);
+        var dataURL = tempCanvas.toDataURL('image/jpg');
+
+        var a = document.createElement("a");
+        a.download = name + ".jpg";
+        a.href = dataURL;
+        a.click();
+        console.log(tempCanvas.width, tempCanvas.height);
+    }
+    function saveAnnotationFile(name, content) {
+        var a = document.createElement("a");
+        a.download = name + ".txt";
+        a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
+        a.click();
+    }
+
+    var drawing = false;
+    var previousAnnotations = [];
+    var Annotations = [];
+    var currentAnnotation = null;
+    var movingType = "";
+
+    canvas.addEventListener("click", function (e) {
+        player.controls = false;
+        if (!drawing) {
+            movingType = "";
+            for (var i = 0; i < Annotations.length; i++) {
+                var clickedBorder = Annotations[i].clickedBorder(e);
+                if (clickedBorder) {
+                    currentAnnotation = Annotations.splice(i, 1)[0];
+                    movingType = clickedBorder;
+                    drawing = true;
+                    canvas.addEventListener("mousemove", drawAnnotations);
+                    return true;
+                }
+            }
+        }
+        createNewAnnotation(e, "scheibe")
+    });
+
+    canvas.addEventListener("contextmenu", function (e) {
+        e.preventDefault();
+        createNewAnnotation(e, "hantel")
+    });
+
+    function createNewAnnotation(e, type) {
+        if (drawing) {
+            currentAnnotation.sortCoordinates();
+            Annotations.push(currentAnnotation);
+            console.log(currentAnnotation.getCsvString())
+            currentAnnotation = null;
+            drawing = false;
+            canvas.removeEventListener("mousemove", drawAnnotations)
+        } else {
+            currentAnnotation = new Annotation(e.clientX, e.clientY, type);
+            drawing = true;
+            canvas.addEventListener("mousemove", drawAnnotations);
+        }
+    }
+
+    var borderType;
+    canvas.addEventListener("mousemove", function (e) {
+        for (var i = 0; i < Annotations.length; i++) {
+            borderType = Annotations[i].clickedBorder(e);
+            if (borderType == "top" || borderType == "bottom") {
+                canvas.style.cursor = "ns-resize";
+                break;
+            }
+            else if (borderType == "left" || borderType == "right") {
+                canvas.style.cursor = "ew-resize";
+                break;
+            } else{
+                if(player.controls) canvas.style.cursor = "crosshair";
+                else canvas.style.cursor = "crosshair";
+            }
+        }
+
+    });
+
+    function drawAnnotations(e) {
+        if (movingType) console.log(movingType)
+        if (currentAnnotation) {
+            switch (movingType) {
+                case "top":
+                    currentAnnotation.startingPointY = e.clientY;
+                    break;
+
+                case "bottom":
+                    currentAnnotation.endingPointY = e.clientY;
+                    break;
+
+                case "left":
+                    currentAnnotation.startingPointX = e.clientX;
+                    break;
+
+                case "right":
+                    currentAnnotation.endingPointX = e.clientX;
+                    break;
+
+                default:
+                    currentAnnotation.endingPointX = e.clientX;
+                    currentAnnotation.endingPointY = e.clientY;
+                    break;
+            }
+        }
+        // ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+        ctx.clearRect(0, 0, 1920, 1920);
+        ctx.lineWidth = 2;
+
+        ctx.setLineDash([])
+        // ctx.strokeStyle = "#FFF";
+        drawIt();
+
+        ctx.setLineDash([10, 10])
+        // ctx.strokeStyle = "#000";
+        drawIt();
+
+
+        function drawIt() {
+            // ctx.beginPath();
+
+            for (var i = 0; i < Annotations.length; i++) {
+                Annotations[i].draw(ctx);
+            }
+            if (currentAnnotation) currentAnnotation.draw(ctx);
+            // ctx.stroke();
+        }
+    }
+
+    var clickTolerance = 10;
+    function Annotation(startingX, startingY, labelString) {
+        this.label = labelString;
+
+        this.startingPointX = startingX;
+        this.startingPointY = startingY;
+
+
+        this.endingPointX = this.startingPointX;
+        this.endingPointY = this.startingPointY;
+
+        this.draw = function (ctx) {
+            ctx.beginPath();
+            if (this.label == "hantel") {
+                if (ctx.getLineDash().length == 0) ctx.strokeStyle = "#F00";
+                else ctx.strokeStyle = "#0F0"
+            } else if (this.label == "scheibe") {
+                if (ctx.getLineDash().length == 0) ctx.strokeStyle = "#FFF";
+                else ctx.strokeStyle = "#000"
+            }
+            ctx.rect(this.startingPointX, this.startingPointY, this.endingPointX - this.startingPointX, this.endingPointY - this.startingPointY);
+            ctx.stroke();
+
+        }
+        this.getCsvString = function () {
+            //path/to/image.jpg,x1,y1,x2,y2,class_name
+            var xFaktor = player.videoWidth / player.width;
+            var yFaktor = player.videoHeight / player.height;
+            var x1 = Math.round(this.startingPointX * xFaktor);
+            var y1 = Math.round(this.startingPointY * xFaktor);
+            var x2 = Math.round(this.endingPointX * yFaktor);
+            var y2 = Math.round(this.endingPointY * yFaktor);
+            return "," + x1 + "," + y1 + "," + x2 + "," + y2 + "," + this.label
+        }
+
+        function withinClickTolerance(value1, value2) {
+            return value1 < value2 + clickTolerance && value1 > value2 - clickTolerance;
+        }
+
+        //Normalize start and ending coordinate. If user paints top right and bottom left corner, they get recalculated, such that its top left and bottom right
+        this.sortCoordinates = function () {
+            if (this.startingPointX > this.endingPointX) {
+                var newStartingX = this.endingPointX;
+                this.endingPointX = this.startingPointX;
+                this.startingPointX = newStartingX;
+            }
+        }
+        this.clickedBorder = function (e) {
+            var x = e.clientX;
+            var y = e.clientY;
+            if (x > this.startingPointX && x < this.endingPointX && withinClickTolerance(y, this.startingPointY)) return "top";
+            if (x > this.startingPointX && x < this.endingPointX && withinClickTolerance(y, this.endingPointY)) return "bottom";
+            if (y > this.startingPointY && y < this.endingPointY && withinClickTolerance(x, this.startingPointX)) return "left";
+            if (y > this.startingPointY && y < this.endingPointY && withinClickTolerance(x, this.endingPointX)) return "right";
+        }
+
+    }
+
+</script>
+
+</html>
