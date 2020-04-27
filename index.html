@@ -206,6 +206,10 @@
     }
 
     function saveAnnotations() {
+        if (Annotations.length == 0) {
+            var saveEmpty = confirm("You are about to save an empty Annotation!");
+            if (!saveEmpty) return;
+        }
         var FileName = (((new Date()) * 1) + "");
         FileName = FileName.substring(0, FileName.length - 3);
         saveCurrentImage(FileName);
@@ -213,6 +217,7 @@
         for (var i = 0; i < Annotations.length; i++) {
             annotationsCsv += FileName + ".jpg" + Annotations[i].getCsvString() + '\n';
         }
+        if(!annotationsCsv) annotationsCsv = FileName+".jpg" + ",,,,,"
         saveAnnotationFile(FileName, annotationsCsv)
         previousAnnotations = Annotations;
         Annotations = [];
@@ -324,8 +329,8 @@
             else if (borderType == "left" || borderType == "right") {
                 canvas.style.cursor = "ew-resize";
                 break;
-            } else{
-                if(player.controls) canvas.style.cursor = "crosshair";
+            } else {
+                if (player.controls) canvas.style.cursor = "crosshair";
                 else canvas.style.cursor = "crosshair";
             }
         }
@@ -333,7 +338,7 @@
     });
 
     function drawAnnotations(e) {
-        if (movingType) console.log(movingType)
+        // if (movingType) console.log(movingType)
         if (currentAnnotation) {
             switch (movingType) {
                 case "top":
@@ -429,6 +434,13 @@
                 this.endingPointX = this.startingPointX;
                 this.startingPointX = newStartingX;
             }
+            if (this.startingPointY > this.endingPointY) {
+                var newStartingY = this.endingPointY;
+                this.endingPointY = this.startingPointY;
+                this.startingPointY = newStartingY;
+            }
+
+
         }
         this.clickedBorder = function (e) {
             var x = e.clientX;
