@@ -86,6 +86,7 @@
     };
 
     let imageIndex = null;
+    let videoIndex = null;
 
     let queuedVideos;
     let queuedAnnotations;
@@ -98,6 +99,7 @@
         var e = e || event;
         e.preventDefault();
         imageIndex = null;
+        videoIndex = null;
         let files = [];
         if (e.dataTransfer.items) {
             for (var i = 0; i < e.dataTransfer.items.length; i++) {
@@ -114,9 +116,12 @@
             files = e.dataTransfer.files;
         }
 
+        clearPlayer();
         queuedVideos = [];
         queuedAnnotations = [];
         queuedImages = [];
+
+        Annotations = [];
 
         let images = 0;
         let videos = 0;
@@ -160,8 +165,7 @@
             for (let i = 0; i < files.length; i++) {
                 queuedVideos.push(files[i]);
             }
-            var fileURL = URL.createObjectURL(queuedVideos[0]);
-            player.src = fileURL;
+            editNextVideo();
         } else {
             alert("For each image you need to provide an annotation file and vice versa. Or for creating new Annotations you need a video file.")
         }
@@ -196,6 +200,27 @@
         player.poster = URL.createObjectURL(queuedImages[imageIndex]);
         eventListenerPosterLoaded();
     }
+    function editNextVideo() {
+        if (videoIndex == null) {
+            videoIndex = 0;
+        } else if (videoIndex + 1 < queuedVideos.length) videoIndex++;
+        clearPlayer();
+        var fileURL = URL.createObjectURL(queuedVideos[videoIndex]);
+        player.src = fileURL;
+    }
+    function editPreviousVideo() {
+        if (videoIndex > 0) videoIndex--;
+        clearPlayer();
+        var fileURL = URL.createObjectURL(queuedVideos[videoIndex]);
+        player.src = fileURL;
+
+    }
+    function clearPlayer() {
+        player.pause();
+        player.removeAttribute('src');
+        player.removeAttribute('poster');
+        player.load();
+    }
     function loadAnnotationsFromCsv(csvString) {
         //path/to/image.jpg,x1,y1,x2,y2,class_name
 
@@ -224,6 +249,7 @@
 
     player.addEventListener("canplay", function () {
         resize();
+        drawAnnotations();
     })
     window.addEventListener('resize', function () {
         Annotations = [];
@@ -271,6 +297,7 @@
             case KEY_LEFT:
             case KEY_A:
                 if (e.ctrlKey && queuedImages.length > 0) editPreviousImage();
+                else if (e.ctrlKey && queuedVideos.length > 0) editPreviousVideo();
                 else if (player.controls) {
                     if (e.shiftKey) player.currentTime -= skipSizeSmall;
                     else player.currentTime -= skipSize;
@@ -279,6 +306,7 @@
             case KEY_RIGHT:
             case KEY_D:
                 if (e.ctrlKey && queuedImages.length > 0) editNextImage();
+                else if (e.ctrlKey && queuedVideos.length > 0) editNextVideo();
                 else if (player.controls) {
                     if (e.shiftKey) player.currentTime += skipSizeSmall;
                     else player.currentTime += skipSize;
