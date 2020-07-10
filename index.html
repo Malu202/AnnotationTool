@@ -52,7 +52,10 @@
     player.height = window.innerHeight / 2; /* to get an initial width to work with*/
 
     function resize() {
-        videoRatio = player.videoHeight / player.videoWidth;
+        let videoRatio = player.videoHeight / player.videoWidth;
+
+        if (currentImageWidth > 0 && currentImageHeight > 0) videoRatio = currentImageHeight / currentImageWidth;
+
         windowRatio = window.innerHeight / window.innerWidth; /* browser size */
 
         var heigh, width;
@@ -82,12 +85,20 @@
         drawAnnotations();
     };
 
-    var files;
+    let imageIndex = null;
+
+    let queuedVideos;
+    let queuedAnnotations;
+    let queuedImages;
+
+    let sourceWidth;
+    let sourceHeight;
+
     function dropHandler(event) {
         var e = e || event;
         e.preventDefault();
-
-        files = [];
+        imageIndex = null;
+        let files = [];
         if (e.dataTransfer.items) {
             for (var i = 0; i < e.dataTransfer.items.length; i++) {
                 if (e.dataTransfer.items[i].kind === 'file') {
@@ -102,12 +113,115 @@
             }
             files = e.dataTransfer.files;
         }
-        var fileURL = URL.createObjectURL(files[0]);
-        player.src = fileURL;
 
-        // resize();
+        queuedVideos = [];
+        queuedAnnotations = [];
+        queuedImages = [];
+
+        let images = 0;
+        let videos = 0;
+        let annotations = 0;
+        for (let i = 0; i < files.length; i++) {
+            let type = files[i].type.split('/')[0];
+            if (type == "image") images++;
+            else if (type == "video") videos++;
+            else if (type == "text") annotations++;
+        }
+        console.log(`images: ${images}, videos: ${videos}, annotations: ${annotations}`);
+
+        files.sort((a, b) => a.name.localeCompare(b.name))
+
+        if (images > 0 && images == annotations && videos == 0) {
+
+            for (let i = 0; i < files.length; i++) {
+                //queuedAnnotations.push(files[i]);
+                let type = files[i].type.split('/')[0];
+                if (type == "image") queuedImages.push(files[i]);
+                if (type == "text") queuedAnnotations.push(files[i]);
+            }
+            if (queuedImages.length == queuedAnnotations.length) {
+                for (let i = 0; i < queuedImages.length; i++) {
+                    let imageName = queuedImages[i].name.split('.').slice(0, -1).join('.');
+                    let annotationName = queuedAnnotations[i].name.split('.').slice(0, -1).join('.');
+
+                    if (imageName != annotationName) {
+                        queuedImages = [];
+                        queuedAnnotations = [];
+                        alert("For each image you need to provide an annotation file and vice versa. Or for creating new Annotations you need a video file.")
+                        return;
+                    }
+                }
+                editNextImage();
+                //resize();
+            }
+        }
+        else if (videos > 0 && images == 0 && annotations == 0) {
+            queuedVideos = [];
+            for (let i = 0; i < files.length; i++) {
+                queuedVideos.push(files[i]);
+            }
+            var fileURL = URL.createObjectURL(queuedVideos[0]);
+            player.src = fileURL;
+        } else {
+            alert("For each image you need to provide an annotation file and vice versa. Or for creating new Annotations you need a video file.")
+        }
 
     }
+    let currentImageHeight;
+    let currentImageWidth;
+    function eventListenerPosterLoaded() {
+        var image = new Image();
+        image.onload = function () {
+            currentImageWidth = image.naturalWidth;
+            currentImageHeight = image.naturalHeight;
+            resize();
+            var fr = new FileReader();
+            fr.onload = function () {
+                loadAnnotationsFromCsv(fr.result);
+            }
+            fr.readAsText(queuedAnnotations[imageIndex]);
+        };
+        image.src = player.poster;
+    }
+
+    function editNextImage() {
+        if (imageIndex == null) {
+            imageIndex = 0;
+        } else if (imageIndex + 1 < queuedImages.length) imageIndex++;
+        player.poster = URL.createObjectURL(queuedImages[imageIndex]);
+        eventListenerPosterLoaded();
+    }
+    function editPreviousImage() {
+        if (imageIndex > 0) imageIndex--;
+        player.poster = URL.createObjectURL(queuedImages[imageIndex]);
+        eventListenerPosterLoaded();
+    }
+    function loadAnnotationsFromCsv(csvString) {
+        //path/to/image.jpg,x1,y1,x2,y2,class_name
+
+        Annotations = [];
+        let csvRows = csvString.split(/[\r\n]+/);
+
+        let xFaktor = player.width / currentImageWidth;
+        let yFaktor = player.height / currentImageHeight;
+        for (var i = 0; i < csvRows.length; i++) {
+            let csvColumns = csvRows[i].split(',');
+            if (csvColumns.length < 6) continue;
+            let x = csvColumns[1] * xFaktor;
+            let y = csvColumns[2] * yFaktor;
+            let x2 = csvColumns[3] * xFaktor;
+            let y2 = csvColumns[4] * yFaktor;
+            let type = csvColumns[5];
+            let annotation = new Annotation(x, y, type);
+            annotation.endingPointX = x2;
+            annotation.endingPointY = y2;
+
+            annotation.sortCoordinates();
+            Annotations.push(annotation);
+        }
+        drawAnnotations();
+    }
+
     player.addEventListener("canplay", function () {
         resize();
     })
@@ -142,6 +256,8 @@
 
     addEvent(document, "keydown", function (e) {
         e = e || window.event;
+        e.preventDefault();
+
         switch (e.keyCode) {
             // case KEY_ENTER:
             //     takeImage();
@@ -154,14 +270,16 @@
                 break;
             case KEY_LEFT:
             case KEY_A:
-                if (player.controls) {
+                if (e.ctrlKey && queuedImages.length > 0) editPreviousImage();
+                else if (player.controls) {
                     if (e.shiftKey) player.currentTime -= skipSizeSmall;
                     else player.currentTime -= skipSize;
                 }
                 break;
             case KEY_RIGHT:
             case KEY_D:
-                if (player.controls) {
+                if (e.ctrlKey && queuedImages.length > 0) editNextImage();
+                else if (player.controls) {
                     if (e.shiftKey) player.currentTime += skipSizeSmall;
                     else player.currentTime += skipSize;
                 }
@@ -217,7 +335,7 @@
         for (var i = 0; i < Annotations.length; i++) {
             annotationsCsv += FileName + ".jpg" + Annotations[i].getCsvString() + '\n';
         }
-        if(!annotationsCsv) annotationsCsv = FileName+".jpg" + ",,,,,"
+        if (!annotationsCsv) annotationsCsv = FileName + ".jpg" + ",,,,,"
         saveAnnotationFile(FileName, annotationsCsv)
         previousAnnotations = Annotations;
         Annotations = [];
@@ -235,22 +353,6 @@
         }
     }
 
-    // function takeImage() {
-    //     ctx.drawImage(player, 0, 0, player.clientWidth, player.clientHeight);
-
-    //     var dataURL = canvas.toDataURL('image/jpg');
-    //     //saveImage("test.jpg", dataURL)
-    // }
-
-    // function saveImage(name, dataUrl) {
-    //     var a = document.createElement("a");
-    //     a.download = name;
-    //     a.href = dataUrl;
-
-    //     a.click();
-    //     ctx.clearRect(0, 0, 1920, 1920)
-    // }
-
     var a;
     function saveCurrentImage(name) {
         var tempCanvas = document.createElement("canvas");
@@ -258,7 +360,23 @@
         tempCanvas.height = player.videoHeight;
         var tempCtx = tempCanvas.getContext("2d");
 
-        tempCtx.drawImage(player, 0, 0, player.videoWidth, player.videoHeight);
+        if (tempCanvas.width == 0 && tempCanvas.height == 0) {
+            var img = new Image;
+            img.onload = function () {
+                tempCanvas.width = img.width;
+                tempCanvas.height = img.height;
+                tempCtx.drawImage(img, 0, 0);
+                saveImage(name, tempCanvas);
+            }
+            img.src = player.poster;
+            return;
+        }
+
+        tempCtx.drawImage(player, 0, 0, tempCanvas.width, tempCanvas.height);
+        saveImage(name, tempCanvas);
+
+    }
+    function saveImage(name, tempCanvas) {
         var dataURL = tempCanvas.toDataURL('image/jpg');
 
         var a = document.createElement("a");
@@ -416,6 +534,10 @@
             //path/to/image.jpg,x1,y1,x2,y2,class_name
             var xFaktor = player.videoWidth / player.width;
             var yFaktor = player.videoHeight / player.height;
+            if (currentImageWidth > 0 && currentImageHeight > 0) {
+                xFaktor = currentImageWidth / player.width;
+                yFaktor = currentImageHeight / player.height;
+            }
             var x1 = Math.round(this.startingPointX * xFaktor);
             var y1 = Math.round(this.startingPointY * xFaktor);
             var x2 = Math.round(this.endingPointX * yFaktor);
