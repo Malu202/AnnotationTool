@@ -356,8 +356,11 @@
             var saveEmpty = confirm("You are about to save an empty Annotation!");
             if (!saveEmpty) return;
         }
-        var FileName = (((new Date()) * 1) + "");
-        FileName = FileName.substring(0, FileName.length - 3);
+        var FileName;
+        if(imageIndex != null) FileName = queuedImages[imageIndex].name.split('.').slice(0, -1).join('.');
+        else FileName = queuedVideos[videoIndex].name.split('.').slice(0, -1).join('.') + "_" +  player.currentTime;
+        FileName = FileName.replace(/ /g, "");
+
         saveCurrentImage(FileName);
         var annotationsCsv = "";
         for (var i = 0; i < Annotations.length; i++) {
