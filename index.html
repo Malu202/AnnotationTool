@@ -45,15 +45,26 @@
             display: flex;
             display: flex;
             box-sizing: border-box;
-            
+
         }
-        #content{
+
+        #content {
             margin: 16px;
             overflow-y: auto;
         }
 
         i {
             font-weight: bold;
+        }
+        #closeButton,
+        #openButton{
+            position: absolute;
+            top:50%;
+            left: -15px;
+            height: 50px;
+        }
+        #openButton{
+            display: none;
         }
     </style>
 </head>
@@ -71,14 +82,17 @@
 
 
     <div id="sidebar">
-        <div id="closeButton"></div>
         <div id="content">
+            <button id="closeButton">►</button>
+            <button id="openButton">◄</button>
+
             <h3>Settings</h3>
             <h4>Instructions</h4>
-            <p>Drag and drop one or more Videos into the window to make new Annoatations. Or drop an existing image and its Annotations file to edit.</p>
+            <p>Drag and drop one or more Videos into the window to make new Annotations. Or drop an existing image and
+                its Annotations file to edit.</p>
             <h4>Classnames</h4>
-            <p> Class 1: <input type="text" id="class1Name"></p>
-            <p> Class 2: <input type="text" id="class2Name"></p>
+            <p> Class 1: <input type="text" id="class1Name" required value="class1"></p>
+            <p> Class 2: <input type="text" id="class2Name" required value="class2"></p>
             <h4>Shortcuts:</h4>
             <p>Play/Pause: <i>Space</i> </p>
             <p>Forward: <i>D</i> or <i>⭢</i> </p>
@@ -93,8 +107,10 @@
             <p>Save Annotation: <i>Enter</i> or <i>Ctrl+S</i></p>
             <p>Restore Previous Annotations: <i>Ctrl+R</i> </p>
             <h4>Preferences</h4>
-            <p><input type="checkbox" name="crosshair" id="crosshair" checked><label for="crosshair"> Crosshair</label></p>
-            <p>Line Thickness: <input type="number" name="lineThickness" id="annotationThickness" required value="2"></p>
+            <p><input type="checkbox" name="crosshair" id="crosshair" checked><label for="crosshair"> Crosshair</label>
+            </p>
+            <p>Line Thickness: <input type="number" name="lineThickness" id="annotationThickness" required value="2">
+            </p>
             <p></p>
         </div>
     </div>
@@ -102,19 +118,25 @@
 
 <script>
     const urlParams = new URLSearchParams(window.location.search);
-    let class1Name = urlParams.get('class1');
-    let class2Name = urlParams.get('class2');
+    let class1Param = urlParams.get('class1');
+    let class2Param = urlParams.get('class2');
 
     let class1Input = document.getElementById('class1Name');
     let class2Input = document.getElementById('class2Name');
 
-    if(class1Name != undefined){
-        class1Input.value = class1Name;
-    }
-    if(class2Name != undefined){
-        class2Input.value = class2Name;
-    }
+    let class1Storage = localStorage.getItem("class1");
+    let class2Storage = localStorage.getItem("class2");
 
+    if (class1Param != null) {
+        class1Input.value = class1Param;
+    } else if (class1Storage != null) {
+        class1Input.value = class1Storage;
+    }
+    if (class2Param != null) {
+        class2Input.value = class2Param;
+    } else if (class2Storage != null) {
+        class2Input.value = class2Storage;
+    }
 
 
     var sidebar = document.getElementById("sidebar")
@@ -123,10 +145,34 @@
     var canvas = document.getElementById("myCanvas");
     var ctx = canvas.getContext("2d");
 
+
+
+    let closeButton = document.getElementById("closeButton");
+    let openButton = document.getElementById("openButton");
+
+    closeButton.addEventListener("click", function(e){
+        e.stopPropagation();
+        closeButton.style.display = "none";
+        openButton.style.display = "block";
+        sidebar.style.right = sidebar.clientWidth * -0.9 + "px";
+    });
+
+    openButton.addEventListener("click", function(e){
+        e.stopPropagation();
+        closeButton.style.display = "block";
+        openButton.style.display = "none";
+        sidebar.style.right = 0;
+    });
+
+
+
     window.addEventListener("drop", dropHandler);
     window.addEventListener("dragover", dragOverHandler);
 
     player.height = window.innerHeight / 2; /* to get an initial width to work with*/
+    player.width = window.innerHeight / 2
+    canvas.height = player.height;
+    canvas.width = player.width;
 
     function resize() {
         let videoRatio = player.videoHeight / player.videoWidth;
@@ -415,6 +461,12 @@
         }
 
     });
+    let inputs = document.getElementsByTagName("input");
+    for (let i = 0; i < inputs.length; i++) {
+        addEvent(inputs[i], "keydown", function(e){
+            e.stopPropagation();
+        });
+    }
 
     function bildAbbrechen() {
         var abbruch = confirm("This image will be canceled.");
@@ -449,6 +501,9 @@
         Annotations = [];
         drawAnnotations();
         player.controls = true;
+
+        localStorage.setItem("class1", class1Input.value);
+        localStorage.setItem("class2", class2Input.value);
     }
 
     function addEvent(element, eventName, callback) {
@@ -521,12 +576,12 @@
                 }
             }
         }
-        createNewAnnotation(e, "scheibe")
+        createNewAnnotation(e, class2Input)
     });
 
     canvas.addEventListener("contextmenu", function (e) {
         e.preventDefault();
-        createNewAnnotation(e, "hantel")
+        createNewAnnotation(e, class2Input)
     });
 
     function createNewAnnotation(e, type) {
@@ -641,10 +696,10 @@
 
         this.draw = function (ctx) {
             ctx.beginPath();
-            if (this.label == "hantel") {
+            if (this.label == class2Input) {
                 if (ctx.getLineDash().length == 0) ctx.strokeStyle = "#F00";
                 else ctx.strokeStyle = "#0F0"
-            } else if (this.label == "scheibe") {
+            } else if (this.label == class2Input) {
                 if (ctx.getLineDash().length == 0) ctx.strokeStyle = "#FFF";
                 else ctx.strokeStyle = "#000"
             }
