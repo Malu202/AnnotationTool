@@ -39,10 +39,21 @@
             bottom: 0;
             right: 0;
             height: 100%;
+            max-width: 350px;
             background-color: #ddf;
             box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
             display: flex;
-            display:none;
+            display: flex;
+            box-sizing: border-box;
+            
+        }
+        #content{
+            margin: 16px;
+            overflow-y: auto;
+        }
+
+        i {
+            font-weight: bold;
         }
     </style>
 </head>
@@ -57,13 +68,55 @@
         <canvas id="myCanvas"></canvas>
     </div>
 
+
+
     <div id="sidebar">
         <div id="closeButton"></div>
-        <div id="content"></div>
+        <div id="content">
+            <h3>Settings</h3>
+            <h4>Instructions</h4>
+            <p>Drag and drop one or more Videos into the window to make new Annoatations. Or drop an existing image and its Annotations file to edit.</p>
+            <h4>Classnames</h4>
+            <p> Class 1: <input type="text" id="class1Name"></p>
+            <p> Class 2: <input type="text" id="class2Name"></p>
+            <h4>Shortcuts:</h4>
+            <p>Play/Pause: <i>Space</i> </p>
+            <p>Forward: <i>D</i> or <i>⭢</i> </p>
+            <p>Backwards: <i>A</i> or <i>⭠</i> </p>
+            <p>Next Video: <i>Ctrl+D</i> </p>
+            <p>Previous Video: <i>Ctrl+A</i> </p>
+            <p>Cancel Annotation: <i>Esc</i> </p>
+            <p>Annotation Class 1: <i>Left Click</i></p>
+            <p>Annotation Class 2: <i>Right Click</i></p>
+
+
+            <p>Save Annotation: <i>Enter</i> or <i>Ctrl+S</i></p>
+            <p>Restore Previous Annotations: <i>Ctrl+R</i> </p>
+            <h4>Preferences</h4>
+            <p><input type="checkbox" name="crosshair" id="crosshair" checked><label for="crosshair"> Crosshair</label></p>
+            <p>Line Thickness: <input type="number" name="lineThickness" id="annotationThickness" required value="2"></p>
+            <p></p>
+        </div>
     </div>
 </body>
 
 <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    let class1Name = urlParams.get('class1');
+    let class2Name = urlParams.get('class2');
+
+    let class1Input = document.getElementById('class1Name');
+    let class2Input = document.getElementById('class2Name');
+
+    if(class1Name != undefined){
+        class1Input.value = class1Name;
+    }
+    if(class2Name != undefined){
+        class2Input.value = class2Name;
+    }
+
+
+
     var sidebar = document.getElementById("sidebar")
     var player = document.getElementById("myVideo");
     var container = document.getElementById("myContainer");
@@ -510,6 +563,8 @@
         drawAnnotations(e);
     });
 
+    let crosshairCheckbox = document.getElementById("crosshair");
+    let annotationThickness = document.getElementById("annotationThickness")
 
     function drawAnnotations(e) {
         // if (movingType) console.log(movingType)
@@ -540,7 +595,7 @@
         // ctx.clearRect(0, 0, canvas.width, canvas.height)
 
         ctx.clearRect(0, 0, 1920, 1920);
-        ctx.lineWidth = 2;
+        ctx.lineWidth = annotationThickness.value;
 
         ctx.setLineDash([])
         // ctx.strokeStyle = "#FFF";
@@ -561,7 +616,7 @@
             // ctx.stroke();
         }
 
-        if (e != undefined) {
+        if (e != undefined && crosshairCheckbox.checked) {
             ctx.lineWidth = 1;
             ctx.setLineDash([]);
             ctx.beginPath();
