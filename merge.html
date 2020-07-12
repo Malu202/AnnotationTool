@@ -18,10 +18,29 @@
         p {
             margin-bottom: 0px;
         }
+
+        #previewClasses,
+        #previewEval,
+        #preview {
+            background-color: #ddf;
+            padding: 16px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #previewEval {
+            background-color: burlywood;
+        }
+
+        #previewClasses {
+            background-color: darkseagreen;
+        }
     </style>
 </head>
 
 <body>
+    <a href="./index.html">← back to AnnotationTool</a>
+    <h3>Input</h3>
     <p>
         <label for="input">Annotations Files:</label>
         <input type="file" name="input" id="fileInput" multiple="multiple" accept="text/plain">
@@ -36,10 +55,22 @@
         <label for="splitRatio" id="splitRatioLabel">Split Ratio: </label>
         <input type="number" value="0.75" min="0" max="1" step="0.05" name="splitRatio" id="splitRatio">
     </div>
-    <div id="preview">
 
     </div>
     <pre id="outputLog"></pre>
+    <h3>Export</h3>
+    <p>
+        Image path prefix (optional):
+        <input type="text" name="" id="imagePrefix">
+    </p>
+    <button id="save">Save Files</button>
+    <h3>Preview</h3>
+    Train:
+    <pre id="preview"></pre>
+    Eval:
+    <pre id="previewEval"></pre>
+    Classes:
+    <pre id="previewClasses"></pre>
 
 </body>
 <script src="merge.js"></script>

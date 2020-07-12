@@ -2,7 +2,14 @@ let splitCheckBox = document.getElementById("splitCheckBox");
 let splitRatioContainer = document.getElementById("splitRatioContainer");
 let splitRatio = document.getElementById("splitRatio");
 let fileInput = document.getElementById("fileInput");
-let progressBar = document.getElementById("progressBar")
+let progressBar = document.getElementById("progressBar");
+let previewDiv = document.getElementById("preview")
+let previewEvalDiv = document.getElementById("previewEval")
+let previewClassesDiv = document.getElementById("previewClasses");
+let imagePathInput = document.getElementById("imagePrefix");
+let saveButton = document.getElementById("save")
+
+
 
 splitCheckBox.addEventListener("change", function () {
     if (splitCheckBox.checked) splitRatioContainer.style.visibility = "visible";
@@ -10,17 +17,22 @@ splitCheckBox.addEventListener("change", function () {
 })
 splitCheckBox.dispatchEvent(new Event("change"))
 
-fileInput.addEventListener("change", function () {
+
+
+fileInput.addEventListener("change", recalculate);
+splitRatio.addEventListener("change", recalculate);
+splitCheckBox.addEventListener("change", recalculate);
+imagePathInput.addEventListener("change", recalculate);
+
+function recalculate() {
     merge(fileInput.files);
-});
+}
 
 var input = './hantel/111hantel.csv';
 var trainingOutput = './hantel/111train.csv';
 var validationOutput = './hantel/111eval.csv';
 var classesOutput = './hantel/111classes.csv';
 
-var csvByImage = {};
-let csvByVideo = {};
 
 
 
@@ -44,7 +56,7 @@ function loadCsvFiles(files, fileIndex, outputString, cb) {
         fileIndex++;
         outputString += fr.result;
         progressBar.value = Math.round((fileIndex / files.length) * 100);
-        if (fileIndex == files.length - 1) {
+        if (fileIndex == files.length) {
             progressBar.visibility = "hidden";
             cb(outputString)
         }
@@ -56,8 +68,13 @@ function loadCsvFiles(files, fileIndex, outputString, cb) {
     }
 }
 
+let trainFile;
+let evalFile;
+let classesFileOutput;
+
 let outputLogDiv = document.getElementById("outputLog");
 function verify(csv) {
+    let csvByVideo = {};
     let outputLog = "";
     var csv = csv.split(/\r?\n/);
 
@@ -80,6 +97,7 @@ function verify(csv) {
         let videoNameEnd = data[imgPath].lastIndexOf("_");
         let video = data[imgPath].substring(0, videoNameEnd);
 
+        if (imagePathInput.value != "") data[imgPath] = imagePathInput.value + data[imgPath]
         if (data[x1] == data[x2] || data[y1] == data[y2]) {
             csv.splice(i, 1);
             outputLog += "Removed line " + (i + 1) + " (zero area)" + ": " + data + "\n";
@@ -120,7 +138,10 @@ function verify(csv) {
     var split = 1;
     if (splitCheckBox.checked) split = splitRatio.value;
     var trainCount = Math.round(videoCount * split);
-    var evalCount = Math.round(videoCount * (1 - split));
+    if (trainCount < 1) trainCount = 1;
+    var evalCount = videoCount - trainCount;
+
+    if (outputLog == "") outputLog = "No errors found, all annotations valid!\n"
 
     outputLog += "=======================\n"
     outputLog += "Found " + videoCount + " valid videos, splitting into " + trainCount + " training and " + evalCount + " validating videos" + '\n';
@@ -141,8 +162,9 @@ function verify(csv) {
     }
     for (var j = 0; j < videoCount; j++) {
         var selectedVideo = Object.keys(csvByVideo)[j];
-        trainCsv.push(csvByVideo[selectedVideo].join('\n'))
+        trainCsv.push(csvByVideo[selectedVideo].join('\n'));
     }
+
 
     outputLogDiv.innerText = outputLog;
 
@@ -153,13 +175,21 @@ function verify(csv) {
     console.log("Training data: " + trainCsv.length + " videos, saved to " + trainingOutput);
     console.log("Evaluation data: " + evalCsv.length + " videos, saved to " + validationOutput);
 
-    if (split != 1) getClasses(trainCsv, evalCsv);
+    calculateSplitByClasses(trainCsv, evalCsv);
     // console.log(evalCsv.toString())
 
+    trainFile = trainCsv.join('\n');
+    evalFile = evalCsv.join('\n')
+
+    previewDiv.innerText = trainFile.slice(0, 500) + "...";
+
+    let evalPreviewString = evalFile.slice(0, 500);
+    if (evalFile.length == 0) evalPreviewString = "No Annotations for eval selected!"
+    previewEvalDiv.innerText = evalPreviewString + "...";
 
 }
 
-function getClasses(train, eval) {
+function calculateSplitByClasses(train, eval) {
 
     var trainCsv = [];
     var evalCsv = [];
@@ -193,8 +223,8 @@ function getClasses(train, eval) {
         if (!allClasses[key2]) allClasses[key2] = 0;
         allClasses[key2] += evalClasses[key2];
     }
-    console.log();
-    console.log("Split per classes: ")
+    let logOutput = "";
+    logOutput += "Split per classes: \n";
     var classes = Object.keys(allClasses);
     var classesFile = "";
 
@@ -206,12 +236,26 @@ function getClasses(train, eval) {
 
         var classTrain = trainClasses[classes[k]]
         var classEval = evalClasses[classes[k]];
+        if (classEval == undefined) classEval = 0;
         var classSplit = classTrain / allClasses[classes[k]];
         classSplit = Math.round(classSplit * 10000) / 100
-        console.log(classes[k] + ": " + classSplit + "% (" + classTrain + "|" + classEval + ")")
+        logOutput += classes[k] + ": " + classSplit + "% (" + classTrain + "|" + classEval + ")\n";
     }
+
+    outputLogDiv.innerText += logOutput;
+
+    classesFileOutput = classesFile;
+    previewClassesDiv.innerText = classesFile;
     //saveFile(classesOutput, classesFile)
+
 }
+
+saveButton.addEventListener("click", function () {
+    if (classesFileOutput.length > 0) saveFile(classesFileOutput, "classes.csv")
+    if (trainFile.length > 0) saveFile(trainFile, "train.csv")
+    if (evalFile.length > 0) saveFile(evalFile, "eval.csv")
+
+});
 
 function saveFile(content, name) {
     var a = document.createElement("a");
