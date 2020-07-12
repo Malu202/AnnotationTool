@@ -20,6 +20,7 @@ var validationOutput = './hantel/111eval.csv';
 var classesOutput = './hantel/111classes.csv';
 
 var csvByImage = {};
+let csvByVideo = {};
 
 
 
@@ -69,13 +70,15 @@ function verify(csv) {
         var x2 = 3;
         var y2 = 4;
         var klasse = 5;
-        var video = 6;
 
         data[x1] = parseInt(data[x1]);
         data[y1] = parseInt(data[y1]);
         data[x2] = parseInt(data[x2]);
         data[y2] = parseInt(data[y2]);
 
+
+        let videoNameEnd = data[imgPath].lastIndexOf("_");
+        let video = data[imgPath].substring(0, videoNameEnd);
 
         if (data[x1] == data[x2] || data[y1] == data[y2]) {
             csv.splice(i, 1);
@@ -103,37 +106,42 @@ function verify(csv) {
             outputLog += "       New line: " + data + "\n";
         }
         //csv[i] = data.toString();
-        if (!csvByImage[data[imgPath]]) csvByImage[data[imgPath]] = [];
-        csvByImage[data[imgPath]].push(data.toString());
 
+
+        // if (!csvByImage[data[imgPath]]) csvByImage[data[imgPath]] = [];
+        // csvByImage[data[imgPath]].push(data.toString());
+
+        if (!csvByVideo[video]) csvByVideo[video] = [];
+        csvByVideo[video].push(data.toString());
     }
 
-    var imageCount = Object.keys(csvByImage).length;
+    var videoCount = Object.keys(csvByVideo).length;
 
     var split = 1;
     if (splitCheckBox.checked) split = splitRatio.value;
-    var trainCount = Math.round(imageCount * split);
-    var evalCount = Math.round(imageCount * (1 - split));
+    var trainCount = Math.round(videoCount * split);
+    var evalCount = Math.round(videoCount * (1 - split));
 
     outputLog += "=======================\n"
-    outputLog += "Found " + imageCount + " valid images, splitting into " + trainCount + " training and " + evalCount + " validating images" + '\n';
+    outputLog += "Found " + videoCount + " valid videos, splitting into " + trainCount + " training and " + evalCount + " validating videos" + '\n';
 
     var trainCsv = [];
     var evalCsv = [];
 
     for (var i = 0; i < evalCount; i++) {
-        var selected = Math.round(Math.random() * (imageCount - 1));
+        var selected = Math.round(Math.random() * (videoCount - 1));
 
-        var selectedImage = Object.keys(csvByImage)[selected];
+        var selectedVideo = Object.keys(csvByVideo)[selected];
 
-        evalCsv.push(csvByImage[selectedImage].join('\n'));
-        delete csvByImage[selectedImage];
 
-        imageCount--;
+        evalCsv.push(csvByVideo[selectedVideo].join('\n'));
+        delete csvByVideo[selectedVideo];
+
+        videoCount--;
     }
-    for (var j = 0; j < imageCount; j++) {
-        var selectedImage = Object.keys(csvByImage)[j];
-        trainCsv.push(csvByImage[selectedImage].join('\n'))
+    for (var j = 0; j < videoCount; j++) {
+        var selectedVideo = Object.keys(csvByVideo)[j];
+        trainCsv.push(csvByVideo[selectedVideo].join('\n'))
     }
 
     outputLogDiv.innerText = outputLog;
@@ -142,8 +150,8 @@ function verify(csv) {
     // saveFile(validationOutput, evalCsv.join('\n'));
 
 
-    console.log("Training data: " + trainCsv.length + " images, saved to " + trainingOutput);
-    console.log("Evaluation data: " + evalCsv.length + " images, saved to " + validationOutput);
+    console.log("Training data: " + trainCsv.length + " videos, saved to " + trainingOutput);
+    console.log("Evaluation data: " + evalCsv.length + " videos, saved to " + validationOutput);
 
     if (split != 1) getClasses(trainCsv, evalCsv);
     // console.log(evalCsv.toString())
