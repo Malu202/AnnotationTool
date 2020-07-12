@@ -584,12 +584,12 @@
                 }
             }
         }
-        createNewAnnotation(e, class1Input)
+        createNewAnnotation(e, class1Input.value)
     });
 
     canvas.addEventListener("contextmenu", function (e) {
         e.preventDefault();
-        createNewAnnotation(e, class2Input)
+        createNewAnnotation(e, class2Input.value)
     });
 
     function createNewAnnotation(e, type) {
@@ -681,6 +681,7 @@
 
         if (e != undefined && crosshairCheckbox.checked) {
             ctx.lineWidth = 1;
+            ctx.strokeStyle = "#000";
             ctx.setLineDash([]);
             ctx.beginPath();
             ctx.moveTo(0, e.clientY);
@@ -704,10 +705,10 @@
 
         this.draw = function (ctx) {
             ctx.beginPath();
-            if (this.label == class2Input) {
+            if (this.label == class2Input.value) {
                 if (ctx.getLineDash().length == 0) ctx.strokeStyle = "#F00";
                 else ctx.strokeStyle = "#0F0"
-            } else if (this.label == class2Input) {
+            } else if (this.label == class1Input.value) {
                 if (ctx.getLineDash().length == 0) ctx.strokeStyle = "#FFF";
                 else ctx.strokeStyle = "#000"
             }
