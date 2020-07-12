@@ -69,6 +69,7 @@ function verify(csv) {
         var x2 = 3;
         var y2 = 4;
         var klasse = 5;
+        var video = 6;
 
         data[x1] = parseInt(data[x1]);
         data[y1] = parseInt(data[y1]);
