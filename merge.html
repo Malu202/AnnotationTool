@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Annotation Tool</title>
+    <style>
+        #splitRatioContainer {
+            margin-left: 24px;
+        }
+
+        #progressBar {
+            margin: 0px;
+            visibility: hidden;
+        }
+
+        p {
+            margin-bottom: 0px;
+        }
+    </style>
+</head>
+
+<body>
+    <p>
+        <label for="input">Annotations Files:</label>
+        <input type="file" name="input" id="fileInput" multiple="multiple" accept="text/plain">
+    </p>
+    <progress id="progressBar" value="0" max="100"></progress>
+    <p>
+        <input type="checkbox" name="splitCheckbox" id="splitCheckBox">
+        <label for="splitCheckbox">Split Dataset</label>
+
+    </p>
+    <div id="splitRatioContainer">
+        <label for="splitRatio" id="splitRatioLabel">Split Ratio: </label>
+        <input type="number" value="0.75" min="0" max="1" step="0.05" name="splitRatio" id="splitRatio">
+    </div>
+    <div id="preview">
+
+    </div>
+    <pre id="outputLog"></pre>
+
+</body>
+<script src="merge.js"></script>
+
+</html>
