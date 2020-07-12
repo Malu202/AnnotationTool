@@ -145,6 +145,14 @@
         class2Input.value = class2Storage;
     }
 
+    class1Input.addEventListener("change", saveClassNames);
+    class2Input.addEventListener("change", saveClassNames);
+
+
+    function saveClassNames() {
+        localStorage.setItem("class1", class1Input.value);
+        localStorage.setItem("class2", class2Input.value);
+    }
 
     var sidebar = document.getElementById("sidebar")
     var player = document.getElementById("myVideo");
@@ -510,8 +518,7 @@
         drawAnnotations();
         player.controls = true;
 
-        localStorage.setItem("class1", class1Input.value);
-        localStorage.setItem("class2", class2Input.value);
+
     }
 
     function addEvent(element, eventName, callback) {
