@@ -7,7 +7,9 @@ let previewDiv = document.getElementById("preview")
 let previewEvalDiv = document.getElementById("previewEval")
 let previewClassesDiv = document.getElementById("previewClasses");
 let imagePathInput = document.getElementById("imagePrefix");
-let saveButton = document.getElementById("save")
+let renameToFilename = document.getElementById("renameToFilename")
+let saveButton = document.getElementById("save");
+let shuffleCheckbox = document.getElementById("shuffle");
 
 
 
@@ -23,6 +25,10 @@ fileInput.addEventListener("change", recalculate);
 splitRatio.addEventListener("change", recalculate);
 splitCheckBox.addEventListener("change", recalculate);
 imagePathInput.addEventListener("change", recalculate);
+shuffleCheckbox.addEventListener("change", recalculate);
+renameToFilename.addEventListener("change", recalculate);
+
+
 
 function recalculate() {
     merge(fileInput.files);
@@ -53,18 +59,33 @@ function loadCsvFiles(files, fileIndex, outputString, cb) {
 
     var fr = new FileReader();
     fr.onload = function () {
+
+        let newData = fr.result;
+        if (renameToFilename.checked) {
+            let csv = newData.split(/\r?\n/);
+            newData = "";
+            for (var i = 0; i < csv.length; i++) {
+                if (csv[i] == "") continue;
+                var data = csv[i].split(',');
+                data[0] = files[fileIndex].name.split('.').slice(0, -1).join('.') + '.' + data[0].split('.').slice(-1);
+                newData += data + '\n';
+            }
+        }
+        outputString += newData;
+
         fileIndex++;
-        outputString += fr.result;
         progressBar.value = Math.round((fileIndex / files.length) * 100);
         if (fileIndex == files.length) {
             progressBar.visibility = "hidden";
-            cb(outputString)
+            cb(outputString, files)
         }
         else loadCsvFiles(files, fileIndex, outputString, cb)
     }
 
     if (type == "text") {
         fr.readAsText(files[fileIndex]);
+    } else {
+        alert('unknown file type "' + type + '" import aborted')
     }
 }
 
@@ -73,7 +94,7 @@ let evalFile;
 let classesFileOutput;
 
 let outputLogDiv = document.getElementById("outputLog");
-function verify(csv) {
+function verify(csv, files) {
     let csvByVideo = {};
     let outputLog = "";
     var csv = csv.split(/\r?\n/);
@@ -172,14 +193,16 @@ function verify(csv) {
     // saveFile(validationOutput, evalCsv.join('\n'));
 
 
-    console.log("Training data: " + trainCsv.length + " videos, saved to " + trainingOutput);
-    console.log("Evaluation data: " + evalCsv.length + " videos, saved to " + validationOutput);
+    // console.log("Training data: " + trainCsv.length + " videos, saved to " + trainingOutput);
+    // console.log("Evaluation data: " + evalCsv.length + " videos, saved to " + validationOutput);
 
     calculateSplitByClasses(trainCsv, evalCsv);
     // console.log(evalCsv.toString())
 
     trainFile = trainCsv.join('\n');
     evalFile = evalCsv.join('\n')
+
+    if (shuffleCheckbox.checked) trainFile = shuffleArray(trainFile.split('\n')).join('\n');
 
     previewDiv.innerText = trainFile.slice(0, 500) + "...";
 
@@ -262,4 +285,15 @@ function saveFile(content, name) {
     a.download = name;
     a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
     a.click();
+}
+
+
+function shuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+    return array;
 }

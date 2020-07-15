@@ -48,22 +48,38 @@
     <progress id="progressBar" value="0" max="100"></progress>
     <p>
         <input type="checkbox" name="splitCheckbox" id="splitCheckBox">
-        <label for="splitCheckbox">Split Dataset</label>
+        <label for="splitCheckBox">Split Dataset</label>
 
+    </p>
+    <p>
+        <label>
+            <input type="checkbox" checked id="shuffle">
+            Shuffle training annotations
+        </label>
     </p>
     <div id="splitRatioContainer">
         <label for="splitRatio" id="splitRatioLabel">Split Ratio: </label>
         <input type="number" value="0.75" min="0" max="1" step="0.05" name="splitRatio" id="splitRatio">
     </div>
-
-    </div>
-    <pre id="outputLog"></pre>
-    <h3>Export</h3>
     <p>
         Image path prefix (optional):
         <input type="text" name="" id="imagePrefix">
     </p>
-    <button id="save">Save Files</button>
+    <p>
+        <label>
+            <input type="checkbox" checked id="renameToFilename">
+            Rename all image paths to filename (usefull when you batch renamed your images/files)
+        </label>
+    </p>
+
+
+    </div>
+    <pre id="outputLog"></pre>
+
+    <p>
+
+        <button id="save">Save Files</button>
+    </p>
     <h3>Preview</h3>
     Train:
     <pre id="preview"></pre>
