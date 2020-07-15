@@ -204,6 +204,10 @@ function verify(csv, files) {
 
     if (shuffleCheckbox.checked) trainFile = shuffleArray(trainFile.split('\n')).join('\n');
 
+    trainFile = "filename,xmin,ymin,xmax,ymax,class\n" + trainFile;
+    evalFile = "filename,xmin,ymin,xmax,ymax,class\n" + evalFile;
+
+
     previewDiv.innerText = trainFile.slice(0, 500) + "...";
 
     let evalPreviewString = evalFile.slice(0, 500);
