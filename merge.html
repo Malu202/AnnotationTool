@@ -51,16 +51,18 @@
         <label for="splitCheckBox">Split Dataset</label>
 
     </p>
+
+    <div id="splitRatioContainer">
+        <label for="splitRatio" id="splitRatioLabel">Split Ratio: </label>
+        <input type="number" value="0.75" min="0" max="1" step="0.05" name="splitRatio" id="splitRatio">
+    </div>
+
     <p>
         <label>
             <input type="checkbox" checked id="shuffle">
             Shuffle training annotations
         </label>
     </p>
-    <div id="splitRatioContainer">
-        <label for="splitRatio" id="splitRatioLabel">Split Ratio: </label>
-        <input type="number" value="0.75" min="0" max="1" step="0.05" name="splitRatio" id="splitRatio">
-    </div>
     <p>
         Image path prefix (optional):
         <input type="text" name="" id="imagePrefix">
